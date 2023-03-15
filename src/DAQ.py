@@ -24,3 +24,14 @@ class TestOsci:
     async def read() -> Tuple[float, float]:
         await asyncio.sleep(2)
         return np.random.rand((10000, 200))
+
+class TestPicoamp:
+    def connect() -> None:
+        print("Connecting picoamperemeter")
+
+    def disconnect() -> None:
+        print("Disconnecting picoamperemeter")
+
+    async def read() -> Tuple[float, float]:
+        await asyncio.sleep(2)
+        return np.random.rand((10000, 200))

@@ -1,5 +1,8 @@
 from typing import Callable
 import numpy as np
+import logging
+
+log = logging.getLogger(__name__)
 
 def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
@@ -42,14 +45,14 @@ class Motors_Control:
         return True
 
     async def check_PMT_curvature_and_move(self, x, y):
-        logging.debug("Moving to x = " + str(round(x, 2)) + ", y=" + str(round(y, 2)))
+        log.debug("Moving to x = " + str(round(x, 2)) + ", y=" + str(round(y, 2)))
         rel_pos_polar = np.append(
             self.f_distance_correction(r), pol2cart(r, np.deg2rad(phi))
         )
         abs_pos_cart = self.PMT_centre + rel_pos_polar
 
         if not self.check_position(abs_pos_cart):
-            logging.info(
+            log.info(
                 "Skipping position %s since it is out of boundaries", abs_pos_cart
             )
             return False
@@ -78,6 +81,7 @@ class Motors_Control:
         if valid:
             await self.mot.Move_3d_in_mm(self.diode_position, 0)
         else:
+            
             raise ValueError(
                 "Diode position is out of motor boundaries (%s)! Configure a valid position, or deactivate reference measurement",
                 self.diode_position,

@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from typing import Protocol
 from scipy.integrate import simps
-
+from .config import Picoscope_config
 
 class Data_Analysis(Protocol):
     def append_data(data: np.ndarray) -> None:
@@ -18,38 +18,28 @@ class Data_Analysis(Protocol):
 
 
 class Pulse_Mode_Analysis:
-    def __init__(self) -> None:
+    def __init__(self, cfg_picoscope: Picoscope_config) -> None:
         self.data_to_analyse = []
-
-        self.baseline_start = 0
-        self.baseline_stop = 30
-        self.sampling_interval = 0.8
-
-        self.reference_baseline_min = 0
-        self.reference_baseline_max = 30
-
-        self.reference_signal_min = 60
-        self.reference_signal_max = 90
-        import datetime
-
-        self.reference_file_name = str(datetime.date.today()) + "_2ndPMT_reference.txt"
-        self.data_file_name_prefix = str(datetime.date.today()) + "_pulse_mode_scan"
+        self.cfg = cfg_picoscope
+        
+        self.reference_file_name = "second_PMT_reference.txt"
+        self.data_file_name_prefix = "pulse_mode_scan"
 
         self.current_position_index = 0
 
     def update_time_axis(self, waveform):
-        self.time_axis = np.arange(0, waveform.size, 1) * self.sampling_interval
+        self.time_axis = np.arange(0, waveform.size, 1) * self.cfg.sampling_interval
 
         self.baseline_mask = np.logical_and(
-            self.time_axis > self.baseline_start, self.time_axis < self.baseline_stop
+            self.time_axis > self.cfg.baseline_tmin, self.time_axis < self.cfg.baseline_tmax
         )
         self.ref_baseline_mask = np.logical_and(
-            self.time_axis > self.reference_baseline_min,
-            self.time_axis < self.reference_baseline_max,
+            self.time_axis > self.reference_baseline_tmin,
+            self.time_axis < self.reference_baseline_tmax,
         )
         self.ref_signal_mask = np.logical_and(
-            self.time_axis > self.reference_signal_min,
-            self.time_axis < self.reference_signal_max,
+            self.time_axis > self.reference_signal_tmin,
+            self.time_axis < self.reference_signal_tmax,
         )
 
     def append_data(self, data):
@@ -98,10 +88,10 @@ class Pulse_Mode_Analysis:
 
         return FWHM, RT, FT
 
-    def get_baseline(self, waveformBlock: np.ndarray) -> Tuple[float, float]:
+    def get_baseline(self, waveformBlock: np.ndarray, mask: np.ndarray) -> Tuple[float, float]:
         baselines = []
         for waveform in waveformBlock:
-            baselines.append(waveform[self.baseline_mask])
+            baselines.append(waveform[mask])
         return np.average(baselines), np.std(baselines) / np.sqrt(len(baselines) - 1)
 
     def get_max_index(self, x, y):
@@ -111,8 +101,8 @@ class Pulse_Mode_Analysis:
         return max_index, max_val, x_at_max
 
     def extract_pulse_region(self, waveform, max_index):
-        start_index = max_index - int(15e-9 / self.sampling_interval)
-        end_index = max_index + int(15e-9 / self.sampling_interval)
+        start_index = max_index - int(15e-9 / self.cfg.sampling_interval)
+        end_index = max_index + int(15e-9 / self.cfg.sampling_interval)
         start_index = max(start_index, 0)
         end_index = min(end_index, len(waveform) - 1)
         pulse = waveform[start_index:end_index]
@@ -140,7 +130,7 @@ class Pulse_Mode_Analysis:
         return pedestal_charge, transit_time, charge, amplitude, FWHM, RT, FT
 
     async def process_data(self, waveform_block: np.ndarray) -> None:
-        baseline, baseline_error = self.get_baseline(waveform_block)
+        baseline, baseline_error = self.get_baseline(waveform_block, self.baseline_mask)
         with open(
             self.data_file_name_prefix + str(self.current_position_index) + ".txt", "a"
         ) as f:
@@ -160,10 +150,7 @@ class Pulse_Mode_Analysis:
             pass
 
     async def analyse_reference(self, data: np.ndarray, timestamp: int) -> None:
-        baseline = []
-        for waveform in data:
-            baseline.append(waveform[self.ref_baseline_mask])
-        baseline = np.mean(baseline)
+        baseline, baseline_error = self.get_baseline(data, self.ref_baseline_mask)
         charge = []
         for waveform in data:
             charge.append(
@@ -183,12 +170,11 @@ class Pulse_Mode_Analysis:
 
 class Current_Mode_Analysis:
     def __init__(self) -> None:
-        import datetime
 
         self.data_to_write = []
         self.lines_written = 0
-        self.reference_file_name = str(datetime.date.today()) + "_PHD_reference.txt"
-        self.data_file_name = str(datetime.date.today()) + "_photocurrent_scan.txt"
+        self.reference_file_name = "photodiode_reference.txt"
+        self.data_file_name = "photocurrent_scan.txt"
 
     def append_data(self, data: np.ndarray) -> None:
         self.data_to_write.append(data)

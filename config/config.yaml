@@ -1,7 +1,33 @@
-defaults:
-  - override hydra/job_logging: logger_config #Check config/hydra/logger_config.yaml, you can change log level there
-
 #Configuration parameters for the scan measurement
+cfg_motors:
+  COM_motors: ["COM4", "COM5", "COM6"]
+  z_at_PMT_centre: 70
+
+cfg_DAQ:
+  picoscope:
+    primary_channel: "A"
+    reference_channel: "B"
+    sampling_interval: 0.8 #in ns, picoscope looks for closest match
+    #time window to analyse baseline of scanned PMT, in ns:
+    baseline_tmin: 0
+    baseline_tmax: 30
+    #time window to analyse baseline and signal of reference PMT, in ns:
+    reference_baseline_tmin: 0
+    reference_baseline_tmax: 30
+    reference_signal_tmin: 60
+    reference_signal_tmax: 90
+
+  picoamp:
+    COM: "COM13"
+
+cfg_grid:
+  r_max: 41
+  r_step: 1.25
+
+cfg_measurement:
+  readouts_per_position: 5 #How often the DAQ is read on a single position (i.e. picoamperemeter measures the current 20 times in a single read, then we would have n*20)
+  reference_period: 30 #How many grid positions are scanned between two reference measurements
+
 cfg_centre_finder:
   number_profiles: 6
   profile_r_start: 45
@@ -10,15 +36,7 @@ cfg_centre_finder:
   fine_step: 0.5
   fit_results_file: "default"
 
-cfg_grid:
-  r_max: 41
-  r_step: 1.25
 
-cfg_DAQ:
-  picoscope_primary_channel: "A"
-  picoscope_secondary_channel: "B"
-  COM_motors: ["COM4", "COM5", "COM6"]
-  COM_picoamperemeter: "COM13"
 
 #hydra creates a new folder when running the code and changes the work directory, which is accessed in the code with {hydra:runtime.cwd}.
 #You can obviously put whatever path you want here, but if you use relative paths (e.g. "../"), then you have to take this into consideration...
@@ -28,3 +46,7 @@ cfg_paths:
   centre_testing: ${hydra:runtime.cwd}
   log: ${hydra:runtime.cwd}
   
+
+#Hydra related configs, you can ignore it for measurement configuration.
+defaults:
+  - override hydra/job_logging: logger_config #Check config/hydra/logger_config.yaml, you can change log level there (default INFO)

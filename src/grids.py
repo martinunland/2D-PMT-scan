@@ -6,6 +6,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class Grid(ABC):
     @abstractmethod
     def make_grid(self) -> None:
@@ -18,6 +19,7 @@ class Grid(ABC):
             self.valid_mask.append(motors_controller.dummy_check_PMT_curvature(x, y))
         self.valid_grid_positions = np.array(self.grid_positions)[self.valid_mask]
         log.debug(f"{self.__class__.__name__}: Finished validating grid elements...")
+
 
 class Circular_Constant_Density(Grid):
     def __init__(self, cfg: Circular_constant_density_config) -> None:
@@ -39,8 +41,3 @@ class Circular_Constant_Density(Grid):
                 if r <= self.max_R:
                     self.grid_positions.append([x, y])
         log.debug(f"{self.__class__.__name__}: Finished building grid...")
-
-
-
-
-
