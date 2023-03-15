@@ -2,6 +2,7 @@
 cfg_motors:
   COM_motors: ["COM4", "COM5", "COM6"]
   z_at_PMT_centre: 70
+  PMT_curvature_mapping: "default"
 
 cfg_DAQ:
   picoscope:

@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from typing import Protocol
 from scipy.integrate import simps
-from .config import Picoscope_config
+from .config import Picoscope_config, Picoamperemeter_config
 
 class Data_Analysis(Protocol):
     def append_data(data: np.ndarray) -> None:
@@ -169,8 +169,8 @@ class Pulse_Mode_Analysis:
 
 
 class Current_Mode_Analysis:
-    def __init__(self) -> None:
-
+    def __init__(self, cfg: Picoamperemeter_config) -> None:
+        self.cfg = cfg
         self.data_to_write = []
         self.lines_written = 0
         self.reference_file_name = "photodiode_reference.txt"

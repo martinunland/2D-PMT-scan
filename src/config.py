@@ -17,6 +17,8 @@ class Centre_find_config:
 @dataclass
 class Motor_config:
     COM_motors: list
+    z_at_PMT_centre: float
+    PMT_curvature_mapping: str
 
 @dataclass
 class Picoscope_config:

@@ -23,6 +23,7 @@ handlers:
     formatter: simple
     # relative to the job log directory
     filename: ${hydra.runtime.output_dir}/${hydra.job.name}.log
+
 root:
   level: DEBUG
   handlers: [console, file]

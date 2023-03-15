@@ -1,37 +1,42 @@
+import logging
 from typing import Protocol, Tuple
 import asyncio
 import numpy as np
-
+log = logging.getLogger(__name__)
 
 class DAQ_Device(Protocol):
-    def connect():
+    async def connect():
         ...
 
-    def disconnect():
+    async def disconnect():
         ...
 
-    def read():
+    async def read():
         ...
 
 
 class TestOsci:
-    def connect() -> None:
-        print("Connecting oscilloscope")
+    async def connect(self) -> None:
+        log.info("Connecting picoscope...")
+        await asyncio.sleep(2)
 
-    def disconnect() -> None:
-        print("Disconnecting oscilloscope")
+    async def disconnect(self) -> None:
+        log.info("Disconnecting picoscope...")
+        await asyncio.sleep(2)
 
-    async def read() -> Tuple[float, float]:
+    async def read(self) -> Tuple[float, float]:
         await asyncio.sleep(2)
         return np.random.rand((10000, 200))
 
 class TestPicoamp:
-    def connect() -> None:
-        print("Connecting picoamperemeter")
+    async def connect(self) -> None:
+        log.info("Connecting picoamperemeter...")
+        await asyncio.sleep(2)
 
-    def disconnect() -> None:
-        print("Disconnecting picoamperemeter")
+    async def disconnect(self) -> None:
+        log.info("Disconnecting picoamperemeter...")
+        await asyncio.sleep(2)
 
-    async def read() -> Tuple[float, float]:
+    async def read(self) -> Tuple[float, float]:
         await asyncio.sleep(2)
         return np.random.rand((10000, 200))
