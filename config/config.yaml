@@ -1,0 +1,30 @@
+defaults:
+  - override hydra/job_logging: logger_config #Check config/hydra/logger_config.yaml, you can change log level there
+
+#Configuration parameters for the scan measurement
+cfg_centre_finder:
+  number_profiles: 6
+  profile_r_start: 45
+  profile_r_stop: 35
+  coarse_step: 1.5
+  fine_step: 0.5
+  fit_results_file: "default"
+
+cfg_grid:
+  r_max: 41
+  r_step: 1.25
+
+cfg_DAQ:
+  picoscope_primary_channel: "A"
+  picoscope_secondary_channel: "B"
+  COM_motors: ["COM4", "COM5", "COM6"]
+  COM_picoamperemeter: "COM13"
+
+#hydra creates a new folder when running the code and changes the work directory, which is accessed in the code with {hydra:runtime.cwd}.
+#You can obviously put whatever path you want here, but if you use relative paths (e.g. "../"), then you have to take this into consideration...
+cfg_paths:
+  data_pulse_mode: ${hydra:runtime.cwd}
+  data_current_mode: ${hydra:runtime.cwd}
+  centre_testing: ${hydra:runtime.cwd}
+  log: ${hydra:runtime.cwd}
+  
