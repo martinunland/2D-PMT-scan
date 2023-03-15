@@ -1,12 +1,11 @@
 from typing import Tuple
-from src.scan import Scan_Manager
+from src.scan_manager import Scan_Manager
 from src.DAQ import DAQ_Device, TestOsci, TestPicoamp
 from src.grids import Circular_Constant_Density
 from src.config import Measurement_Config, DAQ_config
 from src.motor_grid_control import Motors_Control, Coils_dummy
 from src.data_analysis import Pulse_Mode_Analysis, Current_Mode_Analysis
 from hydra.core.config_store import ConfigStore
-from hydra.core.hydra_config import HydraConfig
 import hydra
 import logging
 import asyncio
@@ -35,9 +34,9 @@ async def run_measurement(cfg: Measurement_Config)-> None:
     grid.make_grid()
     grid.validate_grid(motors)
 
-    # analyser, daq = init_pulse_mode_scan(motors ,cfg.cfg_DAQ)
-    # scan_manager = Scan_Manager(grid=grid, motors=motors, device=daq, analyser=analyser)
-    # scan_manager.run()
+    analyser, daq = init_pulse_mode_scan(motors ,cfg.cfg_DAQ)
+    scan_manager = Scan_Manager(grid=grid, motors=motors, device=daq, analyser=analyser)
+    await scan_manager.run()
 
 # * Configstore is the convoluted way of hydra to pass the config file data to a dataclass structure
 cs = ConfigStore.instance()

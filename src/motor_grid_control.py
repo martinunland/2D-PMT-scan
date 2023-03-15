@@ -28,8 +28,8 @@ class DummyMotors:
     def __init__(self):
         self.min_absolute_position = 0
         self.max_absolute_position = 205
-    def Move_3d_in_mm(position, relative):
-        asyncio.sleep(0.5)
+    async def Move_3d_in_mm(self,position, relative):
+        await asyncio.sleep(0.5)
         pass
 
 class Motors_Control:
@@ -39,9 +39,9 @@ class Motors_Control:
         self.cfg = cfg
         self.make_distance_correction_callable()
 
-        self.second_pmt_position = [-1, -1, -1]
-        self.diode_position = [-1, -1, -1]
-        self.PMT_centre = np.array([-1, -1, -1])
+        self.second_pmt_position = [1, 1, 1]
+        self.diode_position = [1, 1, 1]
+        self.PMT_centre = np.array([1, 1, 1])
         self.last_set_coordinates = [-1, -1]
 
     def make_distance_correction_callable(self):
@@ -54,6 +54,9 @@ class Motors_Control:
             log.warning("Loading file with PMT curvature mapping failed, no curvature correction will be performed!...")
             self.f_distance_correction = lambda x: x
 
+    def get_current_position(self):
+        return [1,1,1]
+        
     async def connect_and_configure(self) -> None:
         self.mot = DummyMotors()
         log.info("Connecting to motors...")

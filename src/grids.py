@@ -17,7 +17,7 @@ class Grid(ABC):
         self.valid_mask = []
         for (x, y) in self.grid_positions:
             self.valid_mask.append(motors_controller.dummy_check_PMT_curvature(x, y))
-        self.valid_grid_positions = np.array(self.grid_positions)[self.valid_mask]
+        self.valid_grid_positions = list(np.array(self.grid_positions)[self.valid_mask])
         log.debug(f"{self.__class__.__name__}: Finished validating grid elements...")
 
 

@@ -6,6 +6,9 @@ from typing import Protocol
 from scipy.integrate import simps
 from .config import Picoscope_config, Picoamperemeter_config
 
+log = logging.getLogger(__name__)
+
+
 class Data_Analysis(Protocol):
     def append_data(data: np.ndarray) -> None:
         ...
@@ -21,26 +24,29 @@ class Pulse_Mode_Analysis:
     def __init__(self, cfg_picoscope: Picoscope_config) -> None:
         self.data_to_analyse = []
         self.cfg = cfg_picoscope
-        
+
         self.reference_file_name = "second_PMT_reference.txt"
         self.data_file_name_prefix = "pulse_mode_scan"
 
         self.current_position_index = 0
 
     def update_time_axis(self, waveform):
+        log.debug("Updating/making time axis and baseline/signal masks...")
         self.time_axis = np.arange(0, waveform.size, 1) * self.cfg.sampling_interval
 
         self.baseline_mask = np.logical_and(
-            self.time_axis > self.cfg.baseline_tmin, self.time_axis < self.cfg.baseline_tmax
+            self.time_axis > self.cfg.baseline_tmin,
+            self.time_axis < self.cfg.baseline_tmax,
         )
         self.ref_baseline_mask = np.logical_and(
-            self.time_axis > self.reference_baseline_tmin,
-            self.time_axis < self.reference_baseline_tmax,
+            self.time_axis > self.cfg.reference_baseline_tmin,
+            self.time_axis < self.cfg.reference_baseline_tmax,
         )
         self.ref_signal_mask = np.logical_and(
-            self.time_axis > self.reference_signal_tmin,
-            self.time_axis < self.reference_signal_tmax,
+            self.time_axis > self.cfg.reference_signal_tmin,
+            self.time_axis < self.cfg.reference_signal_tmax,
         )
+        log.debug("Finished making time axis & masks!")
 
     def append_data(self, data):
         self.data_to_analyse.append(data)
@@ -88,7 +94,9 @@ class Pulse_Mode_Analysis:
 
         return FWHM, RT, FT
 
-    def get_baseline(self, waveformBlock: np.ndarray, mask: np.ndarray) -> Tuple[float, float]:
+    def get_baseline(
+        self, waveformBlock: np.ndarray, mask: np.ndarray
+    ) -> Tuple[float, float]:
         baselines = []
         for waveform in waveformBlock:
             baselines.append(waveform[mask])

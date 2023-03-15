@@ -1,7 +1,7 @@
 from typing import TextIO
 from .DAQ import DAQ_Device
 from .grids import Grid
-from .data_analysis import Data_Analysis
+from .data_analysis import Data_Analysis, Pulse_Mode_Analysis
 import asyncio
 import logging
 from .motor_grid_control import Motors_Control
@@ -27,6 +27,14 @@ class Scan_Manager:
         self.counts_since_last_reference = 0
         self.reference_period = 30
         self.log_file = "positions_and_timestamps.txt"
+        
+    async def pre_run_setup(self):
+        if isinstance(self.analyser, Pulse_Mode_Analysis):
+            await self._make_time_axis_and_masks()
+
+    async def _make_time_axis_and_masks(self) -> None:
+        block, timestamp = await self.device.read()
+        self.analyser.update_time_axis(block[0])
 
     async def read_and_append(self) -> None:
         block, timestamp = await self.device.read()
@@ -40,9 +48,10 @@ class Scan_Manager:
             await asyncio.gather(
                 self.motors.move_to_reference(), self.device.configure_for_secondary()
             )
-            block = await self.device.read(channel=self.device.secondary_channel)
-            await self.device.configure_for_primary()
-            await self.analyser.analyse_reference(block)
+            block = await self.device.read_reference()
+            await asyncio.gather(
+                self.analyser.analyse_reference(block), self.device.configure_for_primary()
+            )
 
         except Exception as e:
             log.error("Reference measurement failed with exception: " + str(e))
@@ -51,7 +60,7 @@ class Scan_Manager:
         try:
             x, y = self.grid.valid_grid_positions.pop(0)
             if not await self.motors.check_PMT_curvature_and_move(x, y):
-                self.move_to_next_grid_position()
+                await self.move_to_next_grid_position()
         except IndexError:
             log.info("No more points to scan...Finished!")
 
@@ -71,14 +80,15 @@ class Scan_Manager:
         for job in job_list:
             await asyncio.gather(job(), self.analyser.process_next())
 
-    async def log_position_info(self, f: TextIO):
+    def log_position_info(self, f: TextIO):
         log.debug("Saving set and read motor positions..")
-        set_coordinate = self.motors.last_set_coordinates
+        coordinates = self.motors.last_set_coordinates
         real_position = self.motors.get_current_position()
-        for val in set_coordinate.extend(real_position):
+        coordinates.extend(real_position)
+        for val in coordinates:
             f.write(str(val) + "\t")
 
-    async def log_timestamps(self, f: TextIO):
+    def log_timestamps(self, f: TextIO):
         log.debug("Saving timestamps to file...")
         for val in self.run_timestamps:
             f.write(str(val) + "\t")
@@ -92,6 +102,7 @@ class Scan_Manager:
             f.write("\n")
 
     async def run(self):
+        await self.pre_run_setup()
         await self.measure_reference_device()
         await self.move_to_next_grid_position()
         while len(self.grid.valid_grid_positions) > 0:
