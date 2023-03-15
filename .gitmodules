@@ -4,3 +4,6 @@
 [submodule "tools/scanner_motor_control"]
 	path = tools/scanner_motor_control
 	url = git@github.com:martinunland/scanner_motor_control.git
+[submodule "tools/picoamp-control"]
+	path = tools/picoamp-control
+	url = git@github.com:martinunland/picoamp-control.git
