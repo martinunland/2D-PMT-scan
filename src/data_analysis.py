@@ -1,10 +1,12 @@
 import asyncio
+import pathlib
 from typing import List, Tuple
 import numpy as np
 import logging
 from typing import Protocol
 from scipy.integrate import simps
 from .config import Picoscope_config, Picoamperemeter_config
+from .helper import make_folder_in_hydrawd
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +15,7 @@ class Data_Analysis(Protocol):
     def append_data(data: np.ndarray) -> None:
         ...
 
-    def analyse_reference(data: np.ndarray) -> None:
+    def analyse_reference(data: np.ndarray, timestamp: float) -> None:
         ...
 
     async def process_next() -> None:
@@ -24,11 +26,13 @@ class Pulse_Mode_Analysis:
     def __init__(self, cfg_picoscope: Picoscope_config) -> None:
         self.data_to_analyse = []
         self.cfg = cfg_picoscope
-
-        self.reference_file_name = "second_PMT_reference.txt"
-        self.data_file_name_prefix = "pulse_mode_scan"
-
         self.current_position_index = 0
+        self._make_folder_and_data_file()
+
+    def _make_folder_and_data_file(self):
+        path = make_folder_in_hydrawd("data_pulse_mode/")
+        self.reference_file_name = path.joinpath("second_PMT_reference.txt")
+        self.data_file_name_prefix = path.joinpath("pulse_mode_scan")
 
     def update_time_axis(self, waveform):
         log.debug("Updating/making time axis and baseline/signal masks...")
@@ -49,12 +53,14 @@ class Pulse_Mode_Analysis:
         log.debug("Finished making time axis & masks!")
 
     def append_data(self, data):
+        log.spam("Appended data of shape %s", data.shape)
         self.data_to_analyse.append(data)
+        log.spam("Current data_to_analyse length %s", len(self.data_to_analyse))
 
     def get_pulse_shape(
         self, x: np.ndarray, y: np.ndarray
     ) -> Tuple[float, float, float]:
-
+        log.spam("Calculating pulse shape parameters")
         if not isinstance(x, np.ndarray):
             raise TypeError("x must be a numpy array")
         if not isinstance(y, np.ndarray):
@@ -97,18 +103,21 @@ class Pulse_Mode_Analysis:
     def get_baseline(
         self, waveformBlock: np.ndarray, mask: np.ndarray
     ) -> Tuple[float, float]:
+        log.spam("Calculating mean baseline level of data block...")
         baselines = []
         for waveform in waveformBlock:
             baselines.append(waveform[mask])
         return np.average(baselines), np.std(baselines) / np.sqrt(len(baselines) - 1)
 
     def get_max_index(self, x, y):
+        log.spam("Getting index max")
         max_index = np.argmax(y)
         max_val = y[max_index]
         x_at_max = x[max_index]
         return max_index, max_val, x_at_max
 
     def extract_pulse_region(self, waveform, max_index):
+        log.spam("Selecting region of interest")
         start_index = max_index - int(15e-9 / self.cfg.sampling_interval)
         end_index = max_index + int(15e-9 / self.cfg.sampling_interval)
         start_index = max(start_index, 0)
@@ -118,7 +127,7 @@ class Pulse_Mode_Analysis:
         return pulse, pulse_time
 
     def process_waveform(self, waveform) -> List:
-
+        log.spam("Processing waveform")
         max_index, amplitude, transit_time = self.get_max_index(
             self.time_axis, waveform
         )
@@ -126,38 +135,44 @@ class Pulse_Mode_Analysis:
 
         try:
             FWHM, RT, FT = self.get_pulse_shape(pulse_time, pulse)
-        except:
+        except Exception as err:
             FWHM, RT, FT = [-1, -1, -1]
+            log.spam(
+                "Calculating pulse shape parameters failed, passing default values"
+            )
 
+        log.spam("Calculating charges")
         charge = simps(pulse * 1e-3, pulse_time * 1e-9)
         pedestal_charge = simps(
             waveform[self.baseline_mask] * 1e-3,
             self.time_axis[self.baseline_mask] * 1e-9,
         )
-
+        log.spam("Finished processing waveform")
         return pedestal_charge, transit_time, charge, amplitude, FWHM, RT, FT
 
     async def process_data(self, waveform_block: np.ndarray) -> None:
+        log.spam("Proccesing data block...")
         baseline, baseline_error = self.get_baseline(waveform_block, self.baseline_mask)
         with open(
-            self.data_file_name_prefix + str(self.current_position_index) + ".txt", "a"
+            self.data_file_name_prefix.with_name(f"{self.current_position_index}.txt"), "a"
         ) as f:
             for waveform in waveform_block:
                 values = self.process_waveform(waveform - baseline)
                 for value in values:
                     f.write(str(value) + "\t")
                 f.write("\n")
+        log.spam("Finished processing data block...")
 
     async def process_next(self) -> None:
         try:
+            log.debug("Processing data chunk...")
             waveform_block = self.data_to_analyse.pop(0)
             await self.process_data(waveform_block)
             self.current_position_index += 1
-        except IndexError:
-            logging.debug("No data to analyse")
-            pass
+        except IndexError as err:
+            log.spam("Data list empty, nothing to analyse")
 
-    async def analyse_reference(self, data: np.ndarray, timestamp: int) -> None:
+    async def analyse_reference(self, data: np.ndarray, timestamp: float) -> None:
         baseline, baseline_error = self.get_baseline(data, self.ref_baseline_mask)
         charge = []
         for waveform in data:
@@ -181,8 +196,12 @@ class Current_Mode_Analysis:
         self.cfg = cfg
         self.data_to_write = []
         self.lines_written = 0
-        self.reference_file_name = "photodiode_reference.txt"
-        self.data_file_name = "photocurrent_scan.txt"
+        self._make_folder_and_data_file()
+
+    def _make_folder_and_data_file(self):
+        path = make_folder_in_hydrawd("data_current_mode/")
+        self.reference_file_name = path.joinpath("photodiode_reference.txt")
+        self.data_file_name = path.joinpath("photocurrent_scan.txt")
 
     def append_data(self, data: np.ndarray) -> None:
         self.data_to_write.append(data)

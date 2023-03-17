@@ -56,7 +56,7 @@ class Motors_Control:
 
     def get_current_position(self):
         return [1,1,1]
-        
+
     async def connect_and_configure(self) -> None:
         self.mot = DummyMotors()
         log.info("Connecting to motors...")
@@ -74,7 +74,7 @@ class Motors_Control:
         return True
 
     async def check_PMT_curvature_and_move(self, x, y):
-        log.debug("Moving to x = " + str(round(x, 2)) + ", y=" + str(round(y, 2)))
+        log.info(f"Moving to x={x:.2f}, y={y:.2f}")
 
         r, phi = cart2pol(x,y)
         rel_pos_polar = np.append(
@@ -83,7 +83,7 @@ class Motors_Control:
         abs_pos_cart = self.PMT_centre + rel_pos_polar
 
         if not self.check_position(abs_pos_cart):
-            log.info(
+            log.warning(
                 "Skipping position %s since it is out of boundaries", abs_pos_cart
             )
             return False
@@ -98,6 +98,7 @@ class Motors_Control:
         return True
 
     async def move_to_second_PMT(self):
+        log.info(f"Moving to second pmt position x={self.second_pmt_position[2]:.2f}, y={self.second_pmt_position[1]:.2f}")
         valid = self.check_position(self.second_pmt_position)
         if valid:
             await self.mot.Move_3d_in_mm(self.second_pmt_position, 0)
@@ -108,6 +109,7 @@ class Motors_Control:
             )
 
     async def move_to_diode(self):
+        log.info(f"Moving to diode position x={self.diode_position[2]:.2f}, y={self.diode_position[1]:.2f}")
         valid = self.check_position(self.diode_position)
         if valid:
             await self.mot.Move_3d_in_mm(self.diode_position, 0)

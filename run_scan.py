@@ -1,3 +1,4 @@
+import os
 from typing import Tuple
 from src.scan_manager import Scan_Manager
 from src.DAQ import DAQ_Device, TestOsci, TestPicoamp
@@ -9,6 +10,9 @@ from hydra.core.config_store import ConfigStore
 import hydra
 import logging
 import asyncio
+from src.helper import add_spam_log_level 
+
+add_spam_log_level()
 log = logging.getLogger(__name__)
 
 def init_pulse_mode_scan(motors: Motors_Control, cfg: DAQ_config)->Tuple[Pulse_Mode_Analysis, DAQ_Device]:
@@ -35,12 +39,13 @@ async def run_measurement(cfg: Measurement_Config)-> None:
     grid.validate_grid(motors)
 
     analyser, daq = init_pulse_mode_scan(motors ,cfg.cfg_DAQ)
-    scan_manager = Scan_Manager(grid=grid, motors=motors, device=daq, analyser=analyser)
+    scan_manager = Scan_Manager(grid=grid, motors=motors, device=daq, analyser=analyser, cfg=cfg.cfg_statistics)
     await scan_manager.run()
 
 # * Configstore is the convoluted way of hydra to pass the config file data to a dataclass structure
 cs = ConfigStore.instance()
 cs.store(name="measurement_config", node=Measurement_Config)
+
 
 @hydra.main(
     config_path="config", config_name="config", version_base=None

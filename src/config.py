@@ -42,11 +42,10 @@ class DAQ_config:
     picoscope: Picoscope_config
 
 @dataclass
-class Paths:
-    data_pulse_mode: str
-    data_current_mode: str
-    centre_testing: str
-    log: str
+class Statistics:
+  readouts_per_position: int
+  reference_period: int
+
 
 @dataclass
 class Measurement_Config:
@@ -54,5 +53,5 @@ class Measurement_Config:
     cfg_grid: Circular_constant_density_config
     cfg_DAQ: DAQ_config
     cfg_motors: Motor_config
-    cfg_paths: Paths
+    cfg_statistics: Statistics
     

@@ -6,7 +6,8 @@ import asyncio
 import logging
 from .motor_grid_control import Motors_Control
 from copy import deepcopy
-
+from .config import Statistics
+from .helper import get_hydrawd
 
 log = logging.getLogger(__name__)
 
@@ -18,16 +19,23 @@ class Scan_Manager:
         motors: Motors_Control,
         device: DAQ_Device,
         analyser: Data_Analysis,
+        cfg: Statistics
     ) -> None:
         self.device = device
         self.analyser = analyser
         self.motors = motors
         self.grid = deepcopy(grid)
-        self.readouts_per_position = 5
+        self.readouts_per_position = cfg.readouts_per_position
+        self.reference_period = cfg.reference_period
+
         self.counts_since_last_reference = 0
-        self.reference_period = 30
-        self.log_file = "positions_and_timestamps.txt"
-        
+        self._make_data_file()
+
+    def _make_data_file(self):
+        path = get_hydrawd()
+        self.log_file = path.joinpath("positions_and_timestamps.txt")
+
+
     async def pre_run_setup(self):
         if isinstance(self.analyser, Pulse_Mode_Analysis):
             await self._make_time_axis_and_masks()
@@ -48,9 +56,10 @@ class Scan_Manager:
             await asyncio.gather(
                 self.motors.move_to_reference(), self.device.configure_for_secondary()
             )
-            block = await self.device.read_reference()
+            block, time_stamp = await self.device.read_reference()
             await asyncio.gather(
-                self.analyser.analyse_reference(block), self.device.configure_for_primary()
+                self.analyser.analyse_reference(block, time_stamp),
+                self.device.configure_for_primary(),
             )
 
         except Exception as e:
@@ -70,8 +79,8 @@ class Scan_Manager:
             self.counts_since_last_reference = 0
         await self.move_to_next_grid_position()
 
-    async def measure_current_position(self) -> None:
-        log.debug("Measuring current position")
+    async def read_and_analyse(self) -> None:
+        log.info("Measuring current position")
         job_list = []
         self.run_timestamps = []
         job_list = [self.read_and_append for _ in range(self.readouts_per_position)]
@@ -93,10 +102,10 @@ class Scan_Manager:
         for val in self.run_timestamps:
             f.write(str(val) + "\t")
 
-    async def single_run(self):
+    async def measure_grid_position(self):
         with open(self.log_file, "a") as f:
             self.log_position_info(f)
-            await self.measure_current_position()
+            await self.read_and_analyse()
             self.counts_since_last_reference += 1
             self.log_timestamps(f)
             f.write("\n")
@@ -106,6 +115,6 @@ class Scan_Manager:
         await self.measure_reference_device()
         await self.move_to_next_grid_position()
         while len(self.grid.valid_grid_positions) > 0:
-            await self.single_run()
+            await self.measure_grid_position()
             await self.move_to_next_grid_position()
         await self.measure_reference_device()
