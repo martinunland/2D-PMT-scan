@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from .motor_grid_control import Motors_Control, cart2pol
-from .config import Circular_constant_density_config
+from .motor_grid_control import MotorsControl, cart2pol
+from .config import CircularConstantDensity_config
 import numpy as np
 import logging
 
@@ -12,7 +12,7 @@ class Grid(ABC):
     def make_grid(self) -> None:
         pass
 
-    def validate_grid(self, motors_controller: Motors_Control) -> None:
+    def validate_grid(self, motors_controller: MotorsControl) -> None:
         log.debug(f"{self.__class__.__name__}: Validating grid elements...")
         self.valid_mask = []
         for (x, y) in self.grid_positions:
@@ -21,8 +21,8 @@ class Grid(ABC):
         log.debug(f"{self.__class__.__name__}: Finished validating grid elements...")
 
 
-class Circular_Constant_Density(Grid):
-    def __init__(self, cfg: Circular_constant_density_config) -> None:
+class CircularConstantDensity(Grid):
+    def __init__(self, cfg: CircularConstantDensity_config) -> None:
         log.debug(f"Instance of {self.__class__.__name__} created")
         self.max_R = cfg.r_max
         self.step = cfg.r_step

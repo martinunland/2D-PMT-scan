@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 @dataclass
-class Circular_constant_density_config:
+class CircularConstantDensity_config:
     r_max: float
     r_step: float
 
@@ -15,13 +15,13 @@ class Centre_find_config:
     fit_results_file: str
 
 @dataclass
-class Motor_config:
+class MotorConfig:
     COM_motors: list
     z_at_PMT_centre: float
     PMT_curvature_mapping: str
 
 @dataclass
-class Picoscope_config:
+class PicoscopeConfig:
     primary_channel: str
     reference_channel: str
     sampling_interval: float
@@ -33,13 +33,13 @@ class Picoscope_config:
     reference_signal_tmax: float
     
 @dataclass
-class Picoamperemeter_config:
+class PicoamperemeterConfig:
     COM: str
 
 @dataclass
-class DAQ_config:
-    picoamp: Picoamperemeter_config
-    picoscope: Picoscope_config
+class DAQConfig:
+    picoamp: PicoamperemeterConfig
+    picoscope: PicoscopeConfig
 
 @dataclass
 class Statistics:
@@ -48,10 +48,10 @@ class Statistics:
 
 
 @dataclass
-class Measurement_Config:
+class MeasurementConfig:
     cfg_centre_finder: Centre_find_config
-    cfg_grid: Circular_constant_density_config
-    cfg_DAQ: DAQ_config
-    cfg_motors: Motor_config
+    cfg_grid: CircularConstantDensity_config
+    cfg_DAQ: DAQConfig
+    cfg_motors: MotorConfig
     cfg_statistics: Statistics
     

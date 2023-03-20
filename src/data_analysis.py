@@ -5,25 +5,25 @@ import numpy as np
 import logging
 from typing import Protocol
 from scipy.integrate import simps
-from .config import Picoscope_config, Picoamperemeter_config
+from .config import PicoscopeConfig, PicoamperemeterConfig
 from .helper import make_folder_in_hydrawd
 
 log = logging.getLogger(__name__)
 
 
-class Data_Analysis(Protocol):
+class DataAnalysis(Protocol):
     def append_data(data: np.ndarray) -> None:
         ...
 
     def analyse_reference(data: np.ndarray, timestamp: float) -> None:
         ...
 
-    async def process_next() -> None:
+    def process_next() -> None:
         ...
 
 
-class Pulse_Mode_Analysis:
-    def __init__(self, cfg_picoscope: Picoscope_config) -> None:
+class PulseModeAnalysis:
+    def __init__(self, cfg_picoscope: PicoscopeConfig) -> None:
         self.data_to_analyse = []
         self.cfg = cfg_picoscope
         self.current_position_index = 0
@@ -191,8 +191,8 @@ class Pulse_Mode_Analysis:
             f.write("\n")
 
 
-class Current_Mode_Analysis:
-    def __init__(self, cfg: Picoamperemeter_config) -> None:
+class CurrentModeAnalysis:
+    def __init__(self, cfg: PicoamperemeterConfig) -> None:
         self.cfg = cfg
         self.data_to_write = []
         self.lines_written = 0

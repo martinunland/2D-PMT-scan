@@ -2,7 +2,7 @@ import asyncio
 from typing import Callable
 import numpy as np
 import logging
-from .config import Motor_config
+from .config import MotorConfig
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +32,8 @@ class DummyMotors:
         await asyncio.sleep(0.5)
         pass
 
-class Motors_Control:
-    def __init__(self, cfg: Motor_config) -> None:
+class MotorsControl:
+    def __init__(self, cfg: MotorConfig) -> None:
 
         
         self.cfg = cfg
@@ -128,7 +128,7 @@ class Motors_Control:
 
 
 
-class Coils_dummy:
+class CoilsDummy:
     def __init__(self):
         pass
     async def connect_and_configure(self):

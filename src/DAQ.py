@@ -5,7 +5,7 @@ import numpy as np
 import time
 log = logging.getLogger(__name__)
 
-class DAQ_Device(Protocol):
+class DAQDevice(Protocol):
     async def connect():
         ...
 
