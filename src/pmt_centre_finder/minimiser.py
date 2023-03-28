@@ -2,10 +2,6 @@ import numpy as np
 from src.config import CentreFindConfig
 
 class PMT_circle_fitting():
-    def __init__(self,  cfg: CentreFindConfig, p0_center, p0_center_limits = [10., 10.]):    
-        """
-        For finding the centre of your PMT with the 3D Scanner. Please position the fibre in front of the centre of the PMT as good as possible.
-        """
 
         self.R_p0 = cfg.PMT_bulb_radius
         self.p0 = np.array([p0_center[0],p0_center[1],self.R_p0])
