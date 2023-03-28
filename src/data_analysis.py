@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pathlib
 from typing import List, Tuple
 import numpy as np
@@ -11,18 +12,42 @@ from .helper import make_folder_in_hydrawd
 log = logging.getLogger(__name__)
 
 
+
 class DataAnalysis(Protocol):
-    def append_data(data: np.ndarray) -> None:
-        ...
+    """
+    Protocol class for data analysis implementations.
 
-    def analyse_reference(data: np.ndarray, timestamp: float) -> None:
-        ...
+    Provides a general structure for data analysis of different modes.
+    """
 
-    def process_next() -> None:
+    async def process_next(self)->None:
+        """
+        Process the next data block in the queue.
+        """
+        ...
+    async def append_data(self, data):
+        """
+        Append new data to the data queue.
+        
+        Args:
+            data: The data to be appended to the queue.
+        """
+        ...
+    async def analyse_reference(self, block, time_stamp: float)->None:
+        """
+        Analyse the reference data block.
+        
+        Args:
+            block: The reference data block to be analyzed.
+            time_stamp: The timestamp of the reference data block.
+        """
         ...
 
 
 class PulseModeAnalysis:
+    """
+    Data analysis implementation for pulse mode measurements.
+    """
     def __init__(self, cfg_picoscope: PicoscopeConfig) -> None:
         self.data_to_analyse = []
         self.cfg = cfg_picoscope
@@ -35,6 +60,12 @@ class PulseModeAnalysis:
         self.data_file_name_prefix = path.joinpath("pulse_mode_scan")
 
     def update_time_axis(self, waveform):
+        """
+        Make the time array based on the configured waveform length.
+
+        Args:
+            block: The input data block containing the waveforms.
+        """
         log.debug("Updating/making time axis and baseline/signal masks...")
         self.time_axis = np.arange(0, waveform.size, 1) * self.cfg.sampling_interval
 
@@ -53,6 +84,12 @@ class PulseModeAnalysis:
         log.debug("Finished making time axis & masks!")
 
     def append_data(self, data):
+        """
+        Append new data to the data queue.
+        
+        Args:
+            data: The data to be appended to the queue.
+        """
         log.spam("Appended data of shape %s", data.shape)
         self.data_to_analyse.append(data)
         log.spam("Current data_to_analyse length %s", len(self.data_to_analyse))
@@ -164,6 +201,9 @@ class PulseModeAnalysis:
         log.spam("Finished processing data block...")
 
     async def process_next(self) -> None:
+        """
+        Process the next data block in the queue.
+        """
         try:
             log.debug("Processing data chunk...")
             waveform_block = self.data_to_analyse.pop(0)
@@ -173,6 +213,13 @@ class PulseModeAnalysis:
             log.spam("Data list empty, nothing to analyse")
 
     async def analyse_reference(self, data: np.ndarray, timestamp: float) -> None:
+        """
+        Analyse the data taken from reference device.
+
+        Args:
+            block: The reference data block to be analyzed.
+            time_stamp: The timestamp of the reference data block.
+        """
         baseline, baseline_error = self.get_baseline(data, self.ref_baseline_mask)
         charge = []
         for waveform in data:
@@ -192,10 +239,12 @@ class PulseModeAnalysis:
 
 
 class CurrentModeAnalysis:
+    """
+    Data analysis implementation for current mode measurements.
+    """
     def __init__(self, cfg: PicoamperemeterConfig) -> None:
         self.cfg = cfg
         self.data_to_write = []
-        self.lines_written = 0
         self._make_folder_and_data_file()
 
     def _make_folder_and_data_file(self):
@@ -203,11 +252,11 @@ class CurrentModeAnalysis:
         self.reference_file_name = path.joinpath("photodiode_reference.txt")
         self.data_file_name = path.joinpath("photocurrent_scan.txt")
 
-    def append_data(self, data: np.ndarray) -> None:
+    def append_data(self, data) -> None:
         self.data_to_write.append(data)
 
-    async def analyse_reference(self, data: np.ndarray) -> None:
-        await self.write_data(data, self.reference_file_name)
+    async def analyse_reference(self, data) -> None:
+        self.write_data(data, self.reference_file_name)
 
     def write_header(self, file_name):
         with open(file_name, "a") as f:
@@ -215,21 +264,21 @@ class CurrentModeAnalysis:
             for i in range(2):
                 for value in ["Mean_chn." + str(i), "Standard_error_chn." + str(i)]:
                     f.write(value + "\t")
-            f.write("\n")
+            f.write("Timestamp \n")
 
-    def write_data(self, data, file_name):
-        if self.lines_written == 0:
-            self.write_header(file_name)
+    def write_data(self, data, file_name: pathlib.Path):  
         with open(file_name, "a") as f:
-            for value in data:
-                f.write(str(value) + "\t")
+            if os.stat(file_name).st_size == 0:
+                self.write_header(file_name)
+            for tuple in data:
+                for value in tuple:
+                    f.write(str(value) + "\t")
             f.write("\n")
-            self.lines_written += 1
 
     async def process_next(self) -> None:
         try:
             data = self.data_to_write.pop(0)
-            await self.write_data(data, self.data_file_name)
+            self.write_data(data, self.data_file_name)
         except IndexError:
             logging.debug("No data to analyse")
             pass

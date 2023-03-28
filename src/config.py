@@ -6,13 +6,14 @@ class CircularConstantDensity_config:
     r_step: float
 
 @dataclass
-class Centre_find_config:
-    number_profiles: int
+class CentreFindConfig:
+    ang_step: int
     profile_r_start: float
     profile_r_stop: float
     coarse_step: float
     fine_step: float
     fit_results_file: str
+    PMT_bulb_radius: float
 
 @dataclass
 class MotorConfig:
@@ -35,6 +36,9 @@ class PicoscopeConfig:
 @dataclass
 class PicoamperemeterConfig:
     COM: str
+    count_per_read: int
+    primary_channel: int
+    reference_channel: int
 
 @dataclass
 class DAQConfig:
@@ -49,7 +53,7 @@ class Statistics:
 
 @dataclass
 class MeasurementConfig:
-    cfg_centre_finder: Centre_find_config
+    cfg_centre_finder: CentreFindConfig
     cfg_grid: CircularConstantDensity_config
     cfg_DAQ: DAQConfig
     cfg_motors: MotorConfig

@@ -3,6 +3,7 @@ from typing import Callable
 import numpy as np
 import logging
 from .config import MotorConfig
+from scanner_motor_control import ScannerControl
 
 log = logging.getLogger(__name__)
 
@@ -24,18 +25,23 @@ def distance_between_two_points(p1, p2):
         vals += (k - l) ** 2
     return np.sqrt(vals)
 
+
 class DummyMotors:
     def __init__(self):
         self.min_absolute_position = 0
         self.max_absolute_position = 205
-    async def Move_3d_in_mm(self,position, relative):
+    async def move_to_absolute_position_in_mm(self,position):
         await asyncio.sleep(0.5)
+        pass
+    def check_position_in_mm_allowed(self, position):
+        return [True,True,True]
+    def connect(self):
+        pass
+    def configure_motors(self):
         pass
 
 class MotorsControl:
     def __init__(self, cfg: MotorConfig) -> None:
-
-        
         self.cfg = cfg
         self.make_distance_correction_callable()
 
@@ -43,6 +49,7 @@ class MotorsControl:
         self.diode_position = [1, 1, 1]
         self.PMT_centre = np.array([1, 1, 1])
         self.last_set_coordinates = [-1, -1]
+        self.mot = DummyMotors()
 
     def make_distance_correction_callable(self):
         try:
@@ -58,10 +65,9 @@ class MotorsControl:
         return [1,1,1]
 
     async def connect_and_configure(self) -> None:
-        self.mot = DummyMotors()
-        log.info("Connecting to motors...")
-        await asyncio.sleep(0.5)
-        log.info("Motors connected!")
+        log.info("Connecting to motors async...")
+        self.mot.connect()
+        self.mot.configure_motors()
 
     def dummy_check_PMT_curvature(self, x, y):
         r, phi = cart2pol(x,y)
@@ -72,36 +78,61 @@ class MotorsControl:
         if not self.check_position(abs_pos_cart):
             return False
         return True
+        
 
-    async def check_PMT_curvature_and_move(self, x, y):
-        log.info(f"Moving to x={x:.2f}, y={y:.2f}")
-
+    def _make_absolute_position(self, x, y):
         r, phi = cart2pol(x,y)
         rel_pos_polar = np.append(
             self.f_distance_correction(r), pol2cart(r, np.deg2rad(phi))
         )
         abs_pos_cart = self.PMT_centre + rel_pos_polar
+        return abs_pos_cart
 
+    def _make_absolute_position_polar(self, r,phi):
+        rel_pos_polar = np.append(
+            self.f_distance_correction(r), pol2cart(r, np.deg2rad(phi))
+        )
+        abs_pos_cart = self.PMT_centre + rel_pos_polar
+        return abs_pos_cart 
+
+    async def check_PMT_curvature_and_move(self, x, y):
+        log.info(f"Moving to x={x:.2f}, y={y:.2f}")
+        abs_pos_cart = self._make_absolute_position(x,y)
         if not self.check_position(abs_pos_cart):
             log.warning(
                 "Skipping position %s since it is out of boundaries", abs_pos_cart
             )
             return False
         self.last_set_coordinates = [x, y]
-        await self.mot.Move_3d_in_mm(list(abs_pos_cart), 0)
+        await self.mot.move_to_absolute_position_in_mm(list(abs_pos_cart))
+        return True
+
+    async def check_PMT_curvature_and_move_polar(self, r, phi):
+        log.info(f"Moving to R={r:.2f}, phi={phi:.2f}")
+        abs_pos_cart = self._make_absolute_position_polar(r,phi)
+        if not self.check_position(abs_pos_cart):
+            log.warning(
+                "Skipping position %s since it is out of boundaries", abs_pos_cart
+            )
+            return False
+        self.last_set_coordinates = [x, y]
+        await self.mot.move_to_absolute_position_in_mm(list(abs_pos_cart))
         return True
 
     def check_position(self, position):
-        for val in position:
-            if val >= self.mot.max_absolute_position or val < self.mot.min_absolute_position:
-                return False
-        return True
+        """Returns false if position is outside the boundaries of any of the motors."""
+        return all(self.mot.check_position_in_mm_allowed(position))
+
+    def check_position_polar(self, r, phi):
+        """Returns false if position is outside the boundaries of any of the motors."""
+        abs_pos_cart = self._make_absolute_position_polar(9)
+        return all(self.mot.check_position_in_mm_allowed(abs_pos_cart))
 
     async def move_to_second_PMT(self):
         log.info(f"Moving to second pmt position x={self.second_pmt_position[2]:.2f}, y={self.second_pmt_position[1]:.2f}")
         valid = self.check_position(self.second_pmt_position)
         if valid:
-            await self.mot.Move_3d_in_mm(self.second_pmt_position, 0)
+            await self.mot.move_to_absolute_position_in_mm(self.second_pmt_position)
         else:
             raise ValueError(
                 "Second PMT position is out of motor boundaries (%s)! Configure a valid position, or deactivate reference measurement",
@@ -112,7 +143,7 @@ class MotorsControl:
         log.info(f"Moving to diode position x={self.diode_position[2]:.2f}, y={self.diode_position[1]:.2f}")
         valid = self.check_position(self.diode_position)
         if valid:
-            await self.mot.Move_3d_in_mm(self.diode_position, 0)
+            await self.mot.move_to_absolute_position_in_mm(self.diode_position)
         else:
             
             raise ValueError(

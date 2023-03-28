@@ -1,17 +1,12 @@
-foo: bar
-
-hydra:
-  callbacks:
-    save_job_info:
-      _target_: hydra.experimental.callbacks.PickleJobInfoCallback
-  job:
-    chdir: true
-
 #Configuration parameters for the scan measurement
 cfg_motors:
   COM_motors: ["COM4", "COM5", "COM6"]
   z_at_PMT_centre: 70
   PMT_curvature_mapping: "default"
+
+cfg_statistics:
+  readouts_per_position: 2 #How often the DAQ is read on a single position (i.e. picoamperemeter measures the current 20 times in a single read, then we would have n*20)
+  reference_period: 3 #How many grid positions are scanned between two reference measurements
 
 cfg_DAQ:
   picoscope:
@@ -29,24 +24,19 @@ cfg_DAQ:
 
   picoamp:
     COM: "COM13"
+    count_per_read: 10
 
 cfg_grid:
   r_max: 41
   r_step: 1.25
 
-cfg_statistics:
-  readouts_per_position: 2 #How often the DAQ is read on a single position (i.e. picoamperemeter measures the current 20 times in a single read, then we would have n*20)
-  reference_period: 3 #How many grid positions are scanned between two reference measurements
-
 cfg_centre_finder:
-  number_profiles: 6
+  ang_step: 45 #step in degrees, if step 30, then a profile at 0, 30, 60, 90...330 will be measured 
   profile_r_start: 45
   profile_r_stop: 35
   coarse_step: 1.5
   fine_step: 0.5
   fit_results_file: "default"
-
-
 
 #hydra creates a new folder when running the code and changes the work directory
 #You can obviously put whatever path you want here, but if you use relative paths (e.g. "../"), then you have to take this into consideration...

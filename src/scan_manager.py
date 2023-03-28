@@ -52,6 +52,7 @@ class ScanManager:
                 self.motors.move_to_reference(), self.device.configure_for_secondary()
             )
             block, time_stamp = await self.device.read_reference()
+            print(block)
             await asyncio.gather(
                 self.analyser.analyse_reference(block, time_stamp),
                 self.device.configure_for_primary(),
