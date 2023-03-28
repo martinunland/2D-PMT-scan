@@ -7,7 +7,7 @@ import logging
 from .motor_grid_control import MotorsControl
 from copy import deepcopy
 from .config import Statistics
-from .helper import get_hydrawd
+from .helper import get_hydra_working_directory
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ScanManager:
         self.reference_period = cfg.reference_period
 
         self.measurements_since_last_reference = 0
-        self.log_file = get_hydrawd().joinpath("positions_and_timestamps.txt")
+        self.log_file = get_hydra_working_directory().joinpath("positions_and_timestamps.txt")
 
     async def setup_analyser(self):
         if isinstance(self.analyser, PulseModeAnalysis):

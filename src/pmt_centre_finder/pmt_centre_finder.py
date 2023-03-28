@@ -2,12 +2,12 @@ import logging
 from typing import Tuple
 import numpy as np
 from DAQ import DAQDevice
-from motor_grid_control import MotorsControl, pol2cart
+from motor_grid_control import MotorsControl
 from data_analysis import DataAnalysis
 from src.config import CentreFindConfig
 from minimiser import PMT_circle_fitting
-from scipy.interpolate import interp1d
-from helper import LoopTimer
+
+from helper import LoopTimer, make_folder_in_working_directory
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +71,7 @@ class CentreFinder:
         self.daq = self.daq
         self.daq.configure_for_primary()
         self.prompt_to_user()
+        self.save_path = make_folder_in_working_directory("centre_finder_output")
 
     def measure_intensity(self)->Tuple[float,float]:
         return self.analyser.get_simple_intensity(self.daq.read())
@@ -153,48 +154,27 @@ class CentreFinder:
                 
         return(np.array(intensities), np.array(intensities_e), np.array(position), np.array(position_R))
 
-    def interpolate_profile_intensity_point(self, centre,angle, R, charge, intensity):
-        interpol = interp1d(charge,R)
-        r_fifty = interpol(rand)
-        xy_fifty = pol2cart(r_fifty, np.deg2rad(angle))
-        return (centre[1]+xy_fifty[0],centre[2]+xy_fifty[1])
 
-    def run(self):
-        
-        allangles = np.arange(0,360, self.cfg.number_profiles)
-        x_data = np.array([])
-        y_data = np.array([])
+
+    def measure_all_profiles(self):
+        self.all_profile_angles = np.arange(0,360, self.cfg.number_profiles)
+
+        self.motors.check_PMT_curvature_and_move_polar(0,0)
+        centre_intensity = self.measure_intensity()
+
         timer = LoopTimer() 
-        for angle in allangles:
+        for angle in self.all_profile_angles:
             try:
-                intensities, errors, positions, Rs = self.measure_profile(angle)
+                intensity, intensity_error, positions, Rs = self.measure_profile(angle)
+                np.save(self.save_path.join(f"profile_{angle}deg.npy"), (intensity, intensity_error, positions, Rs, centre_intensity))
             except:
                 continue
-            try:
-                newpoint = self.interpolate_profile_intensity_point(angle, Rs, intensities, intensity = norm[0]/3.)
-                x_data = np.append(x_data,newpoint[1])
-                y_data = np.append(y_data,newpoint[0])
-            except Exception as err:
-                log.error(f"{err}")
-
             timer.print_time_left()
 
-            if large:
-                np.save(anglefolder+"/lu_angle_"+str(int(angle)), (data,norm))
-            else:
-                np.save(anglefolder+"/QE_angle_"+str(int(angle)), (data,norm))
-        
-        if large:
-            out = getcenter(allangles,np.linspace(100,250,50))
-            print(out)
-            f = open(anglefolder+"/lu_angle_deviation.txt","w")
-            
-        else:
-            out = getcenter(allangles,np.linspace(norm[0]*0.3,norm[0]*0.7,50))
-            print(out)
-            f = open(anglefolder+"/QE_angle_deviation.txt","w")
-        f.write("#x0, y0, R, stdx0, stdy0, minx0, maxx0, miny0,maxy0 \n")
-        for i in out:
-            f.write(str(i)+"\t")
-        f.write("\n")
-        f.close()
+    def analyse_profile(self):
+        ...
+
+    def run(self):
+        self.measure_background_threshold()
+        self.measure_all_profiles()
+        self.analyse_profiles()

@@ -7,7 +7,7 @@ import logging
 from typing import Protocol
 from scipy.integrate import simps
 from .config import PicoscopeConfig, PicoamperemeterConfig
-from .helper import make_folder_in_hydrawd
+from .helper import make_folder_in_working_directory
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class PulseModeAnalysis:
         self._make_folder_and_data_file()
 
     def _make_folder_and_data_file(self):
-        path = make_folder_in_hydrawd("data_pulse_mode/")
+        path = make_folder_in_working_directory("data_pulse_mode/")
         self.reference_file_name = path.joinpath("second_PMT_reference.txt")
         self.data_file_name_prefix = path.joinpath("pulse_mode_scan")
 
@@ -248,7 +248,7 @@ class CurrentModeAnalysis:
         self._make_folder_and_data_file()
 
     def _make_folder_and_data_file(self):
-        path = make_folder_in_hydrawd("data_current_mode/")
+        path = make_folder_in_working_directory("data_current_mode/")
         self.reference_file_name = path.joinpath("photodiode_reference.txt")
         self.data_file_name = path.joinpath("photocurrent_scan.txt")
 

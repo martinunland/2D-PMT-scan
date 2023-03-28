@@ -19,15 +19,15 @@ def add_spam_log_level():
 
     logging.Logger.spam = spam
 
-def get_hydrawd()-> pathlib.Path:
+def get_hydra_working_directory()-> pathlib.Path:
     if "HYDRA_OUTPUT_DIR" in os.environ:
         from hydra.core.hydra_config import HydraConfig
         return pathlib.Path(HydraConfig.get().runtime.output_dir)
     else: #Only needed for unittests... otherwise hydra should be always running
         return pathlib.Path(".")
 
-def make_folder_in_hydrawd(folder: str) -> pathlib.Path:
-    hydrawd = get_hydrawd()
+def make_folder_in_working_directory(folder: str) -> pathlib.Path:
+    hydrawd = get_hydra_working_directory()
     newfolder = hydrawd.joinpath(folder)
     if not os.path.exists(newfolder):
         os.mkdir(newfolder)

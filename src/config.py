@@ -10,6 +10,7 @@ class CentreFindConfig:
     ang_step: int
     profile_r_start: float
     profile_r_stop: float
+    save_all_profiles: bool
     coarse_step: float
     fine_step: float
     fit_results_file: str
