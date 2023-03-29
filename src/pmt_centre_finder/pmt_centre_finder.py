@@ -11,57 +11,6 @@ from helper import LoopTimer, make_folder_in_working_directory
 
 log = logging.getLogger(__name__)
 
-
-
-
-def minimizealot(angles,bsl):
-    
-    
-    minim = PMT_circle_fitting( centre, PMT_Model=0)
-    x_data = []
-    y_data = []
-    for angle in angles:
-        try:
-            if large:
-                data,norm= np.load(anglefolder+"/lu_angle_"+str(int(angle))+".npy")
-            else:
-                data,norm= np.load(anglefolder+"/QE_angle_"+str(int(angle))+".npy")
-            newpoint = get_nifty_fifty(centre, angle, data[3], data[0], rand = bsl)
-            x_data.append(newpoint[1])
-            y_data.append(newpoint[0])
-        except Exception as err:
-            print err
-            pass
-    plt.plot(x_data,y_data,'.')
-    minim.x_data = np.array(x_data)
-    minim.y_data = np.array(y_data)
-    minim.minimize()
-    return minim.parameter_best_fit
-
-def getcenter(angles,baselines ):
-    x0s = []
-    y0s = []
-    Rs = []
-    for bs in baselines:
-        temp = minimizealot(angles,bs)
-        x0s.append(temp[0])
-        y0s.append(temp[1])
-        Rs.append(temp[2])
-    x0s = np.array(x0s)
-    y0s = np.array(y0s)
-    y0s = y0s[x0s>0]
-    Rs = np.array(Rs)
-    Rs = Rs[x0s>0]
-    baselines = baselines[x0s>0]
-    x0s = x0s[x0s>0]
-    plt.figure()
-    plt.plot(baselines,x0s)
-    plt.figure()
-    plt.plot(baselines,y0s)
-    plt.figure()
-    plt.plot(baselines,Rs)
-    return np.average(x0s),np.average(y0s),np.average(Rs), np.std(x0s), np.std(y0s), np.amin(x0s),np.amax(x0s),np.amin(y0s),np.amax(y0s)
-    
 class CentreFinder:
     def __init__(self, cfg: CentreFindConfig, motors: MotorsControl, analyser: DataAnalysis, daq: DAQDevice):
 
@@ -166,13 +115,15 @@ class CentreFinder:
         for angle in self.all_profile_angles:
             try:
                 intensity, intensity_error, positions, Rs = self.measure_profile(angle)
-                np.save(self.save_path.join(f"profile_{angle}deg.npy"), (intensity, intensity_error, positions, Rs, centre_intensity))
+                np.save(self.save_path.join(f"profile_{angle}deg.npy"), (intensity, intensity_error, positions, Rs, centre_intensity, self.threshold))
             except:
                 continue
             timer.print_time_left()
 
     def analyse_profile(self):
-        ...
+        fitter = PMT_circle_fitting(self.cfg.PMT_bulb_radius, self.motors.centre, self.save_path, self.all_profile_angles)
+        (x0, x0_err), (y0, y0_err) = fitter.fit_profiles_and_get_PMT_centre()
+        
 
     def run(self):
         self.measure_background_threshold()
