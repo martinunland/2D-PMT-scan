@@ -20,11 +20,9 @@ def add_spam_log_level():
     logging.Logger.spam = spam
 
 def get_hydra_working_directory()-> pathlib.Path:
-    if "HYDRA_OUTPUT_DIR" in os.environ:
-        from hydra.core.hydra_config import HydraConfig
-        return pathlib.Path(HydraConfig.get().runtime.output_dir)
-    else: #Only needed for unittests... otherwise hydra should be always running
-        return pathlib.Path(".")
+    from hydra.core.hydra_config import HydraConfig
+    return pathlib.Path(HydraConfig.get().runtime.output_dir)
+
 
 def make_folder_in_working_directory(folder: str) -> pathlib.Path:
     hydrawd = get_hydra_working_directory()
@@ -33,21 +31,5 @@ def make_folder_in_working_directory(folder: str) -> pathlib.Path:
         os.mkdir(newfolder)
     return newfolder
 
-class LoopTimer:
-    def __init__(self, total_count:int)->None:
-        self.start_time = time.time()
-        self.total = total_count
-        self.current_loop_count = 0
 
-    def get_time_left(self)->float:
-        self.current_loop_count+=1
-        return (time.time()-self.start_time)*(self.total-self.current_loop_count)/float(self.current_loop_count)
-
-    def print_time_left(self):
-        time_left = self.get_time_left()/60. #min
-        unit = "min"
-        if time_left < 1:
-            time_left *= 60.
-            unit = "s"
-        print(f"Time left:{time_left:.1f} {unit}")
         

@@ -1,4 +1,6 @@
 from typing import TextIO
+
+from alive_progress import alive_bar
 from .DAQ import DAQDevice
 from .grids import Grid
 from .data_analysis import DataAnalysis, PulseModeAnalysis
@@ -52,7 +54,6 @@ class ScanManager:
                 self.motors.move_to_reference(), self.device.configure_for_secondary()
             )
             block, time_stamp = await self.device.read_reference()
-            print(block)
             await asyncio.gather(
                 self.analyser.analyse_reference(block, time_stamp),
                 self.device.configure_for_primary(),
@@ -110,6 +111,8 @@ class ScanManager:
         await self.setup_analyser()
         await self.measure_reference_device()
         await self.move_to_next_grid_position()
-        while len(self.grid.valid_grid_positions) > 0:
-            await self.measure_log_info_and_move()
+        with alive_bar(len(self.grid.valid_grid_positions), enrich_print = False, title = "Scanning PMT") as bar:
+            while len(self.grid.valid_grid_positions) > 0:
+                await self.measure_log_info_and_move()
+                bar()
         await self.measure_reference_device()

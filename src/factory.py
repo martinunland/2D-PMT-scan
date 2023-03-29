@@ -1,7 +1,7 @@
 from src.DAQ import TestOsci, TestPicoamp
 from src.data_analysis import PulseModeAnalysis, CurrentModeAnalysis
 from src.motor_grid_control import MotorsControl
-from helper import MeasurementMode
+from src.helper import MeasurementMode
 
 
 class DeviceFactory:

@@ -12,7 +12,6 @@ from .helper import make_folder_in_working_directory
 log = logging.getLogger(__name__)
 
 
-
 class DataAnalysis(Protocol):
     """
     Protocol class for data analysis implementations.
@@ -20,23 +19,25 @@ class DataAnalysis(Protocol):
     Provides a general structure for data analysis of different modes.
     """
 
-    async def process_next(self)->None:
+    async def process_next(self) -> None:
         """
         Process the next data block in the queue.
         """
         ...
+
     async def append_data(self, data):
         """
         Append new data to the data queue.
-        
+
         Args:
             data: The data to be appended to the queue.
         """
         ...
-    async def analyse_reference(self, block, time_stamp: float)->None:
+
+    async def analyse_reference(self, block, time_stamp: float) -> None:
         """
         Analyse the reference data block.
-        
+
         Args:
             block: The reference data block to be analyzed.
             time_stamp: The timestamp of the reference data block.
@@ -48,6 +49,7 @@ class PulseModeAnalysis:
     """
     Data analysis implementation for pulse mode measurements.
     """
+
     def __init__(self, cfg_picoscope: PicoscopeConfig) -> None:
         self.data_to_analyse = []
         self.cfg = cfg_picoscope
@@ -58,6 +60,31 @@ class PulseModeAnalysis:
         path = make_folder_in_working_directory("data_pulse_mode/")
         self.reference_file_name = path.joinpath("second_PMT_reference.txt")
         self.data_file_name_prefix = path.joinpath("pulse_mode_scan")
+
+    def get_simple_intensity(self, data, signal_mask=None, baseline_mask=None):
+
+        if signal_mask == None:
+            signal_mask = np.ones(
+                data[0].size
+            )  # The entire waveform will be integrated
+
+        if baseline_mask == None:
+            baseline = 0
+            baseline_error = 0
+        else:
+            baseline, baseline_error = self.get_baseline(data, baseline_mask)
+
+        charge = []
+        for waveform in data:
+            charge.append(
+                simps(
+                    waveform[signal_mask] - baseline,
+                    self.time_axis[signal_mask],
+                )
+            )
+        mean = np.mean(charge)
+        error = np.std(charge) / np.sqrt(len(charge) - 1)
+        return (mean, error), (baseline, baseline_error)
 
     def update_time_axis(self, waveform):
         """
@@ -86,7 +113,7 @@ class PulseModeAnalysis:
     def append_data(self, data):
         """
         Append new data to the data queue.
-        
+
         Args:
             data: The data to be appended to the queue.
         """
@@ -191,7 +218,8 @@ class PulseModeAnalysis:
         log.spam("Proccesing data block...")
         baseline, baseline_error = self.get_baseline(waveform_block, self.baseline_mask)
         with open(
-            self.data_file_name_prefix.with_name(f"{self.current_position_index}.txt"), "a"
+            self.data_file_name_prefix.with_name(f"{self.current_position_index}.txt"),
+            "a",
         ) as f:
             for waveform in waveform_block:
                 values = self.process_waveform(waveform - baseline)
@@ -220,17 +248,9 @@ class PulseModeAnalysis:
             block: The reference data block to be analyzed.
             time_stamp: The timestamp of the reference data block.
         """
-        baseline, baseline_error = self.get_baseline(data, self.ref_baseline_mask)
-        charge = []
-        for waveform in data:
-            charge.append(
-                simps(
-                    waveform[self.ref_signal_mask] - baseline,
-                    self.time_axis[self.ref_signal_mask],
-                )
-            )
-        mean = np.mean(charge)
-        error = np.std(charge) / np.sqrt(len(charge) - 1)
+        (mean, error), _ = self.get_simple_intensity(
+            data, self.ref_signal_mask, self.ref_baseline_mask
+        )
 
         with open(self.reference_file_name, "a") as f:
             for val in [timestamp, mean, error]:
@@ -242,6 +262,7 @@ class CurrentModeAnalysis:
     """
     Data analysis implementation for current mode measurements.
     """
+
     def __init__(self, cfg: PicoamperemeterConfig) -> None:
         self.cfg = cfg
         self.data_to_write = []
@@ -252,10 +273,13 @@ class CurrentModeAnalysis:
         self.reference_file_name = path.joinpath("photodiode_reference.txt")
         self.data_file_name = path.joinpath("photocurrent_scan.txt")
 
+    def get_simple_intensity(self, data):
+        return data[self.cfg.primary_channel], data[self.cfg.reference_channel]
+
     def append_data(self, data) -> None:
         self.data_to_write.append(data)
 
-    async def analyse_reference(self, data) -> None:
+    async def analyse_reference(self, data, timestamp) -> None:
         self.write_data(data, self.reference_file_name)
 
     def write_header(self, file_name):
@@ -266,7 +290,7 @@ class CurrentModeAnalysis:
                     f.write(value + "\t")
             f.write("Timestamp \n")
 
-    def write_data(self, data, file_name: pathlib.Path):  
+    def write_data(self, data, file_name: pathlib.Path):
         with open(file_name, "a") as f:
             if os.stat(file_name).st_size == 0:
                 self.write_header(file_name)

@@ -23,8 +23,8 @@ async def run_measurement(cfg: MeasurementConfig)-> None:
 
     await asyncio.gather(motors.connect_and_configure(), coils.connect_and_configure(), daq.connect())
     
-    centre_finder = CentreFinder(cfg.cfg_centre_finder, motors, analyser, daq)
-    centre_finder.run()
+    # centre_finder = CentreFinder(cfg.cfg_centre_finder, motors, analyser, daq)
+    # await centre_finder.run()
 
     grid = CircularConstantDensity(cfg.cfg_grid)
     grid.make_grid()
@@ -47,7 +47,7 @@ def run_scan(cfg: MeasurementConfig) -> None:
     try:
         loop.run_until_complete(tasks)
     except KeyboardInterrupt:
-        log.info("Scan stopped by user...")
+        log.info("Scan stopped by user...maybe you have to press ctrl+c again depending on your system...")
         tasks.cancel()
     finally:
         loop.close()

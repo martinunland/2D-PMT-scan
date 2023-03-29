@@ -103,19 +103,19 @@ class MotorsControl:
                 "Skipping position %s since it is out of boundaries", abs_pos_cart
             )
             return False
-        self.last_set_coordinates = [x, y]
+        self.last_set_coordinates = list(abs_pos_cart)
         await self.mot.move_to_absolute_position_in_mm(list(abs_pos_cart))
         return True
 
     async def check_PMT_curvature_and_move_polar(self, r, phi):
-        log.info(f"Moving to R={r:.2f}, phi={phi:.2f}")
         abs_pos_cart = self._make_absolute_position_polar(r,phi)
         if not self.check_position(abs_pos_cart):
             log.warning(
                 "Skipping position %s since it is out of boundaries", abs_pos_cart
             )
             return False
-        self.last_set_coordinates = [x, y]
+        log.info(f"Moving to R={r:.2f}, phi={phi:.2f}, ({abs_pos_cart})")
+        self.last_set_coordinates = list(abs_pos_cart)
         await self.mot.move_to_absolute_position_in_mm(list(abs_pos_cart))
         return True
 
@@ -125,7 +125,7 @@ class MotorsControl:
 
     def check_position_polar(self, r, phi):
         """Returns false if position is outside the boundaries of any of the motors."""
-        abs_pos_cart = self._make_absolute_position_polar(9)
+        abs_pos_cart = self._make_absolute_position_polar(r, phi)
         return all(self.mot.check_position_in_mm_allowed(abs_pos_cart))
 
     async def move_to_second_PMT(self):

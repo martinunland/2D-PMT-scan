@@ -21,10 +21,11 @@ cfg_DAQ:
     reference_baseline_tmax: 30
     reference_signal_tmin: 60
     reference_signal_tmax: 90
-
   picoamp:
     COM: "COM13"
     count_per_read: 10
+    primary_channel: 0
+    reference_channel: 1
 
 cfg_grid:
   r_max: 41
@@ -32,12 +33,13 @@ cfg_grid:
 
 cfg_centre_finder:
   ang_step: 45 #step in degrees, if step 30, then a profile at 0, 30, 60, 90...330 will be measured 
-  profile_r_start: 45
-  profile_r_stop: 35
-  coarse_step: 1.5
-  fine_step: 0.5
+  profile_r_start: 42
+  profile_r_stop: 37
+  coarse_step: 2
+  fine_step: 1
   fit_results_file: "default"
   save_all_profiles: False
+  PMT_bulb_radius: 40
 
 #hydra creates a new folder when running the code and changes the work directory
 #You can obviously put whatever path you want here, but if you use relative paths (e.g. "../"), then you have to take this into consideration...
