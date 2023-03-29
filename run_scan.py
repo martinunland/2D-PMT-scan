@@ -1,3 +1,4 @@
+from src.pmt_centre_finder.pmt_centre_finder import CentreFinder
 from src.scan_manager import ScanManager
 from src.grids import CircularConstantDensity
 from src.config import MeasurementConfig
@@ -22,6 +23,9 @@ async def run_measurement(cfg: MeasurementConfig)-> None:
 
     await asyncio.gather(motors.connect_and_configure(), coils.connect_and_configure(), daq.connect())
     
+    centre_finder = CentreFinder(cfg.cfg_centre_finder, motors, analyser, daq)
+    centre_finder.run()
+
     grid = CircularConstantDensity(cfg.cfg_grid)
     grid.make_grid()
     grid.validate_grid(motors)

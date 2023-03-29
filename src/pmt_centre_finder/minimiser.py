@@ -16,20 +16,33 @@ class ProfileData:
     position: np.ndarray
     R: np.ndarray
     centre_intensity: np.ndarray
-
+    threshold: np.ndarray
 
 class PMT_circle_fitting:
     def __init__(
-        self, centre: list, data_folder: pathlib.Path, profile_angles: np.ndarray
+        self, PMT_radius: float, centre: list, data_folder: pathlib.Path, profile_angles: np.ndarray
     ):
+        self.R_p0 = PMT_radius
         self.centre = centre
         self.data_folder = data_folder
         self.profile_angles = profile_angles
         self.NR_FITS = 20
         self.MEAN_INTENSITY_COUNTS_PER_FIT = 10
-        self.get_data_from_files()
+        self._get_data_from_files()
+        self._calculate_intensities_to_fit()
 
-    def get_data_from_files(self):
+    def _calculate_intensities_to_fit(self):
+        centre_intensity = [] 
+        threshold = []
+        for key, item in self.data:
+            centre_intensity.append(item.centre_intensity[0])
+            threshold.append(item.background_intensity[0])
+        centre_intensity = np.mean(centre_intensity)
+        threshold = np.mean(threshold)
+        self.MIN_INTENSITY = threshold
+        self.MAX_INTENSITY = centre_intensity/2.
+
+    def _get_data_from_files(self):
         self.data = {}
         for angle in self.profile_angles:
             try:
@@ -50,7 +63,7 @@ class PMT_circle_fitting:
         interp_x_y = pol2cart(interp_R, np.deg2rad(angle))
         return (self.centre[1] + interp_x_y[0], self.centre[2] + interp_x_y[1])
 
-    def get_centre_with_error(self):
+    def fit_profiles_and_get_PMT_centre(self)->Tuple[Tuple[float,float], Tuple[float, float]]:
         log.info("Fitting profile data several times to avoid systematics...")
 
         all_ints = np.linspace(self.MIN_INTENSITY, self.MAX_INTENSITY, 1000)
@@ -65,6 +78,8 @@ class PMT_circle_fitting:
         mean_y0 = np.mean(y0_fits)
         error_x0 = np.std(x0_fits)
         error_y0 = np.std(y0_fits)
+        log.info(f"PMT centre is at: x={mean_x0:.2f}+-{error_x0:.2f}, x={mean_y0:.2f}+-{error_y0:.2f}")
+
         return (mean_x0, error_x0), (mean_y0, error_y0)
 
     def get_centre_from_intensity_set(self, intensity_levels)->Tuple[float, float]:
