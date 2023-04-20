@@ -3,7 +3,7 @@ from typing import TextIO
 from alive_progress import alive_bar
 from .DAQ import DAQDevice
 from .grids import Grid
-from .data_analysis import DataAnalysis, PulseModeAnalysis
+from .data_analysis import DataAnalysis, PulseModeAnalysisWrapper
 import asyncio
 import logging
 from .motor_grid_control import MotorsControl
@@ -34,7 +34,7 @@ class ScanManager:
         self.log_file = get_hydra_working_directory().joinpath("positions_and_timestamps.txt")
 
     async def setup_analyser(self):
-        if isinstance(self.analyser, PulseModeAnalysis):
+        if isinstance(self.analyser, PulseModeAnalysisWrapper):
             await self._make_time_axis_and_masks()
 
     async def _make_time_axis_and_masks(self) -> None:

@@ -8,6 +8,7 @@ from typing import Protocol
 from scipy.integrate import simps
 from .config import PicoscopeConfig, PicoamperemeterConfig
 from .helper import make_folder_in_working_directory
+from pulse_mode_analysis import PulseModeAnalysis
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class DataAnalysis(Protocol):
         ...
 
 
-class PulseModeAnalysis:
+class PulseModeAnalysisWrapper:
     """
     Data analysis implementation for pulse mode measurements.
     """
@@ -55,36 +56,19 @@ class PulseModeAnalysis:
         self.cfg = cfg_picoscope
         self.current_position_index = 0
         self._make_folder_and_data_file()
+        self.PMT_analyser = PulseModeAnalysis(
+            self.cfg.sampling_interval, self.cfg.baseline_tmin, self.cfg.baseline_tmax
+        )
+        self.reference_analyser = PulseModeAnalysis(
+            self.cfg.sampling_interval,
+            self.cfg.reference_baseline_tmin,
+            self.cfg.reference_baseline_tmax,
+        )
 
     def _make_folder_and_data_file(self):
         path = make_folder_in_working_directory("data_pulse_mode/")
         self.reference_file_name = path.joinpath("second_PMT_reference.txt")
         self.data_file_name_prefix = path.joinpath("pulse_mode_scan")
-
-    def get_simple_intensity(self, data, signal_mask=None, baseline_mask=None):
-
-        if signal_mask == None:
-            signal_mask = np.ones(
-                data[0].size
-            )  # The entire waveform will be integrated
-
-        if baseline_mask == None:
-            baseline = 0
-            baseline_error = 0
-        else:
-            baseline, baseline_error = self.get_baseline(data, baseline_mask)
-
-        charge = []
-        for waveform in data:
-            charge.append(
-                simps(
-                    waveform[signal_mask] - baseline,
-                    self.time_axis[signal_mask],
-                )
-            )
-        mean = np.mean(charge)
-        error = np.std(charge) / np.sqrt(len(charge) - 1)
-        return (mean, error), (baseline, baseline_error)
 
     def update_time_axis(self, waveform):
         """
@@ -94,19 +78,19 @@ class PulseModeAnalysis:
             block: The input data block containing the waveforms.
         """
         log.debug("Updating/making time axis and baseline/signal masks...")
-        self.time_axis = np.arange(0, waveform.size, 1) * self.cfg.sampling_interval
 
-        self.baseline_mask = np.logical_and(
-            self.time_axis > self.cfg.baseline_tmin,
-            self.time_axis < self.cfg.baseline_tmax,
-        )
-        self.ref_baseline_mask = np.logical_and(
-            self.time_axis > self.cfg.reference_baseline_tmin,
-            self.time_axis < self.cfg.reference_baseline_tmax,
-        )
+        self.PMT_analyser.baseline_tmin = self.cfg.baseline_tmin
+        self.PMT_analyser.baseline_tmax = self.cfg.baseline_tmax
+
+        self.reference_analyser.baseline_tmin = self.cfg.reference_baseline_tmin
+        self.reference_analyser.baseline_tmax = self.cfg.reference_baseline_tmax
+
+        self.PMT_analyser.update_time_axis(waveform)
+        self.reference_analyser.update_time_axis(waveform)
+
         self.ref_signal_mask = np.logical_and(
-            self.time_axis > self.cfg.reference_signal_tmin,
-            self.time_axis < self.cfg.reference_signal_tmax,
+            self.reference_analyser.time_axis > self.cfg.reference_signal_tmin,
+            self.reference_analyser.time_axis < self.cfg.reference_signal_tmax,
         )
         log.debug("Finished making time axis & masks!")
 
@@ -121,108 +105,15 @@ class PulseModeAnalysis:
         self.data_to_analyse.append(data)
         log.spam("Current data_to_analyse length %s", len(self.data_to_analyse))
 
-    def get_pulse_shape(
-        self, x: np.ndarray, y: np.ndarray
-    ) -> Tuple[float, float, float]:
-        log.spam("Calculating pulse shape parameters")
-        if not isinstance(x, np.ndarray):
-            raise TypeError("x must be a numpy array")
-        if not isinstance(y, np.ndarray):
-            raise TypeError("y must be a numpy array")
-
-        max_index, max_val, x_at_max = self.get_max_index(x, y)
-        first_part = x <= x_at_max
-        second_part = x >= x_at_max
-
-        x1_ar, x2_ar = [], []
-        limits = np.array([0.8, 0.5, 0.2])
-        for limit in limits:
-            for idx, val in enumerate(y[first_part][::-1]):
-                if val < limit * max_val:
-                    x1_ar.append(
-                        np.interp(
-                            limit * max_val,
-                            [val, y[first_part][::-1][idx - 1]],
-                            [x[first_part][::-1][idx], x[first_part][::-1][idx - 1]],
-                        )
-                    )
-                    break
-            for idx, val in enumerate(y[second_part]):
-                if val < limit * max_val:
-                    x2_ar.append(
-                        np.interp(
-                            limit * max_val,
-                            [y[second_part][idx - 1], val],
-                            [x[second_part][::-1][idx - 1], x[second_part][::-1][idx]],
-                        )
-                    )
-                    break
-
-        FWHM = x2_ar[1] - x1_ar[1]
-        RT = x1_ar[0] - x1_ar[2]
-        FT = x2_ar[2] - x2_ar[0]
-
-        return FWHM, RT, FT
-
-    def get_baseline(
-        self, waveformBlock: np.ndarray, mask: np.ndarray
-    ) -> Tuple[float, float]:
-        log.spam("Calculating mean baseline level of data block...")
-        baselines = []
-        for waveform in waveformBlock:
-            baselines.append(waveform[mask])
-        return np.average(baselines), np.std(baselines) / np.sqrt(len(baselines) - 1)
-
-    def get_max_index(self, x, y):
-        log.spam("Getting index max")
-        max_index = np.argmax(y)
-        max_val = y[max_index]
-        x_at_max = x[max_index]
-        return max_index, max_val, x_at_max
-
-    def extract_pulse_region(self, waveform, max_index):
-        log.spam("Selecting region of interest")
-        start_index = max_index - int(15e-9 / self.cfg.sampling_interval)
-        end_index = max_index + int(15e-9 / self.cfg.sampling_interval)
-        start_index = max(start_index, 0)
-        end_index = min(end_index, len(waveform) - 1)
-        pulse = waveform[start_index:end_index]
-        pulse_time = self.time_axis[start_index:end_index]
-        return pulse, pulse_time
-
-    def process_waveform(self, waveform) -> List:
-        log.spam("Processing waveform")
-        max_index, amplitude, transit_time = self.get_max_index(
-            self.time_axis, waveform
-        )
-        pulse, pulse_time = self.extract_pulse_region(waveform, max_index)
-
-        try:
-            FWHM, RT, FT = self.get_pulse_shape(pulse_time, pulse)
-        except Exception as err:
-            FWHM, RT, FT = [-1, -1, -1]
-            log.spam(
-                "Calculating pulse shape parameters failed, passing default values"
-            )
-
-        log.spam("Calculating charges")
-        charge = simps(pulse * 1e-3, pulse_time * 1e-9)
-        pedestal_charge = simps(
-            waveform[self.baseline_mask] * 1e-3,
-            self.time_axis[self.baseline_mask] * 1e-9,
-        )
-        log.spam("Finished processing waveform")
-        return pedestal_charge, transit_time, charge, amplitude, FWHM, RT, FT
-
     async def process_data(self, waveform_block: np.ndarray) -> None:
         log.spam("Proccesing data block...")
-        baseline, baseline_error = self.get_baseline(waveform_block, self.baseline_mask)
+        baseline, _ = self.PMT_analyser.get_baseline(waveform_block)
         with open(
             self.data_file_name_prefix.with_name(f"{self.current_position_index}.txt"),
             "a",
         ) as f:
             for waveform in waveform_block:
-                values = self.process_waveform(waveform - baseline)
+                values = self.PMT_analyser.process_waveform(waveform - baseline)
                 for value in values:
                     f.write(str(value) + "\t")
                 f.write("\n")
@@ -248,8 +139,8 @@ class PulseModeAnalysis:
             block: The reference data block to be analyzed.
             time_stamp: The timestamp of the reference data block.
         """
-        (mean, error), _ = self.get_simple_intensity(
-            data, self.ref_signal_mask, self.ref_baseline_mask
+        (mean, error), _ = self.reference_analyser.get_simple_intensity(
+            data, self.ref_signal_mask
         )
 
         with open(self.reference_file_name, "a") as f:

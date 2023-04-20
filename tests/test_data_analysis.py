@@ -1,7 +1,7 @@
 import logging
 import unittest
 from src.helper import add_spam_log_level
-from src.data_analysis import PulseModeAnalysis, CurrentModeAnalysis
+from src.data_analysis import PulseModeAnalysisWrapper, CurrentModeAnalysis
 from src.config import PicoscopeConfig, PicoamperemeterConfig
 
 add_spam_log_level()
@@ -20,7 +20,7 @@ class TestPulseModeAnalysis(unittest.TestCase):
             reference_signal_tmin=60,
             reference_signal_tmax=90,
         )
-        self.analyser = PulseModeAnalysis(cfg)
+        self.analyser = PulseModeAnalysisWrapper(cfg)
 
     def test_update_time_axis(self):
         block = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

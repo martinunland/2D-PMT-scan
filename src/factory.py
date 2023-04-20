@@ -1,5 +1,5 @@
 from src.DAQ import TestOsci, TestPicoamp
-from src.data_analysis import PulseModeAnalysis, CurrentModeAnalysis
+from src.data_analysis import PulseModeAnalysisWrapper, CurrentModeAnalysis
 from src.motor_grid_control import MotorsControl
 from src.helper import MeasurementMode
 
@@ -17,7 +17,7 @@ class DeviceFactory:
     @staticmethod
     def _create_pulse_mode_analyser_and_daq(motors: MotorsControl, cfg: object):
         motors.set_default_reference_callable(motors.move_to_second_PMT)
-        analyzer = PulseModeAnalysis(cfg.picoscope)
+        analyzer = PulseModeAnalysisWrapper(cfg.picoscope)
         daq = TestOsci()
         return analyzer, daq
 
