@@ -101,12 +101,12 @@ class PulseModeAnalysisWrapper:
         Args:
             data: The data to be appended to the queue.
         """
-        log.spam("Appended data of shape %s", data.shape)
+        log.debug("Appended data of shape %s", data.shape)
         self.data_to_analyse.append(data)
-        log.spam("Current data_to_analyse length %s", len(self.data_to_analyse))
+        log.debug("Current data_to_analyse length %s", len(self.data_to_analyse))
 
     async def process_data(self, waveform_block: np.ndarray) -> None:
-        log.spam("Proccesing data block...")
+        log.debug("Proccesing data block...")
         baseline, _ = self.PMT_analyser.get_baseline(waveform_block)
         with open(
             self.data_file_name_prefix.with_name(f"{self.current_position_index}.txt"),
@@ -117,7 +117,7 @@ class PulseModeAnalysisWrapper:
                 for value in values:
                     f.write(str(value) + "\t")
                 f.write("\n")
-        log.spam("Finished processing data block...")
+        log.debug("Finished processing data block...")
 
     async def process_next(self) -> None:
         """
@@ -129,7 +129,7 @@ class PulseModeAnalysisWrapper:
             await self.process_data(waveform_block)
             self.current_position_index += 1
         except IndexError as err:
-            log.spam("Data list empty, nothing to analyse")
+            log.debug("Data list empty, nothing to analyse")
 
     async def analyse_reference(self, data: np.ndarray, timestamp: float) -> None:
         """

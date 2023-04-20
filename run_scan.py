@@ -7,22 +7,26 @@ from hydra.core.config_store import ConfigStore
 import hydra
 import logging
 import asyncio
-from src.helper import add_spam_log_level, MeasurementMode
+from src.helper import MeasurementMode
 from src.factory import DeviceFactory
 
-add_spam_log_level()
 log = logging.getLogger(__name__)
 
+# These modules are very verbose, change as needed if you have a bug
+logging.getLogger("pulse_mode_analysis").setLevel(logging.WARNING)
 
-async def run_measurement(cfg: MeasurementConfig)-> None:
-    mode = MeasurementMode.CURRENT # MeasurementMode.PULSE 
-    
+
+async def run_measurement(cfg: MeasurementConfig) -> None:
+    mode = MeasurementMode.PULSE  # MeasurementMode.PULSE MeasurementMode.CURRENT
+
     motors = MotorsControl(cfg.cfg_motors)
     coils = CoilsDummy()
     analyser, daq = DeviceFactory.create_analyser_and_daq(mode, motors, cfg.cfg_DAQ)
 
-    await asyncio.gather(motors.connect_and_configure(), coils.connect_and_configure(), daq.connect())
-    
+    await asyncio.gather(
+        motors.connect_and_configure(), coils.connect_and_configure(), daq.connect()
+    )
+
     # centre_finder = CentreFinder(cfg.cfg_centre_finder, motors, analyser, daq)
     # await centre_finder.run()
 
@@ -30,8 +34,11 @@ async def run_measurement(cfg: MeasurementConfig)-> None:
     grid.make_grid()
     grid.validate_grid(motors)
 
-    scan_manager = ScanManager(grid=grid, motors=motors, device=daq, analyser=analyser, cfg=cfg.cfg_statistics)
+    scan_manager = ScanManager(
+        grid=grid, motors=motors, device=daq, analyser=analyser, cfg=cfg.cfg_statistics
+    )
     await scan_manager.run()
+
 
 # * Configstore is the convoluted way of hydra to pass the config file data to a dataclass structure
 cs = ConfigStore.instance()
@@ -47,11 +54,13 @@ def run_scan(cfg: MeasurementConfig) -> None:
     try:
         loop.run_until_complete(tasks)
     except KeyboardInterrupt:
-        log.info("Scan stopped by user...maybe you have to press ctrl+c again depending on your system...")
+        log.info(
+            "Scan stopped by user...maybe you have to press ctrl+c again depending on your system..."
+        )
         tasks.cancel()
     finally:
         loop.close()
-    
+
 
 if __name__ == "__main__":
     run_scan()
