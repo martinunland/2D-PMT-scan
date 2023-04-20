@@ -59,8 +59,8 @@ class ScanManager:
                 self.device.configure_for_primary(),
             )
 
-        except Exception as e:
-            log.error("Reference measurement failed with exception: " + str(e))
+        except Exception as err:
+            log.error(f"Reference measurement failed with error of type {type(err).__name__}: {err}")
 
     async def move_to_next_grid_position(self) -> None:
         try:

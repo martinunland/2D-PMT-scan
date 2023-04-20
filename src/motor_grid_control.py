@@ -57,7 +57,7 @@ class MotorsControl:
             from scipy.interpolate import interp1d
             self.f_distance_correction = interp1d(x,y)
         except Exception as err:
-            log.error(err)
+            log.error(f"Error of type {type(err).__name__}: {err}")
             log.warning("Loading file with PMT curvature mapping failed, no curvature correction will be performed!...")
             self.f_distance_correction = lambda x: x
 

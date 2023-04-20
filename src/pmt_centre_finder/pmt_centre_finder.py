@@ -23,7 +23,7 @@ from src.DAQ import DAQDevice
 from src.motor_grid_control import MotorsControl
 from src.data_analysis import DataAnalysis
 from src.config import CentreFindConfig
-from .minimiser import PMT_circle_fitting
+from src.pmt_centre_finder.minimiser import PMT_circle_fitting
 from alive_progress import alive_bar
 from src.helper import make_folder_in_working_directory
 
@@ -203,7 +203,7 @@ class CentreFinder:
                     )
                     bar()
                 except Exception as err:
-                    log.error(err)
+                    log.error(f"Error of type {type(err).__name__}: {err}")
                     bar(skipped=True)
                     continue
 

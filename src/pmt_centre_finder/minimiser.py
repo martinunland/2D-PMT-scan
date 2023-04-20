@@ -91,7 +91,7 @@ class PMT_circle_fitting:
                     )
                 )
             except Exception as err:
-                log.error(err)
+                log.error(f"Error of type {type(err).__name__}: {err}")
                 pass
         assert (
             len(self.data) > 3
@@ -179,7 +179,7 @@ class PMT_circle_fitting:
                     self.datasets[i][0].append(interp_cartesian[1])
                     self.datasets[i][1].append(interp_cartesian[0])
                 except Exception as err:
-                    log.error(err)
+                    log.error(f"Error of type {type(err).__name__}: {err}")
                     pass
         for i, _ in enumerate(intensity_levels):
             self.datasets[i][0] = np.array(self.datasets[i][0])
