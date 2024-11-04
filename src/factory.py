@@ -17,8 +17,8 @@ class DeviceFactory:
     @staticmethod
     def _create_pulse_mode_analyser_and_daq(motors: MotorsControl, cfg: object):
         motors.set_default_reference_callable(motors.move_to_second_PMT)
-        analyzer = PulseModeAnalysisWrapper(cfg.picoscope)
         daq = TestOsci()
+        analyzer = PulseModeAnalysisWrapper(cfg.picoscope)
         return analyzer, daq
 
     @staticmethod

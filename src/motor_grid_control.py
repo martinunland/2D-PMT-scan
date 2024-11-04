@@ -49,7 +49,7 @@ class MotorsControl:
         self.diode_position = [1, 1, 1]
         self.PMT_centre = np.array([1, 1, 1])
         self.last_set_coordinates = [-1, -1]
-        self.mot = DummyMotors()
+        self.mot = DummyMotorScas()
 
     def make_distance_correction_callable(self):
         try:

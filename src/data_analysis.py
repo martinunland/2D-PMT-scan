@@ -5,7 +5,6 @@ from typing import List, Tuple
 import numpy as np
 import logging
 from typing import Protocol
-from scipy.integrate import simps
 from .config import PicoscopeConfig, PicoamperemeterConfig
 from .helper import make_folder_in_working_directory
 from pulse_mode_analysis import PulseModeAnalysis
@@ -113,7 +112,7 @@ class PulseModeAnalysisWrapper:
             "a",
         ) as f:
             for waveform in waveform_block:
-                values = self.PMT_analyser.process_waveform(waveform - baseline)
+                values = self.PMT_analyser.process_SPW(waveform - baseline)
                 for value in values:
                     f.write(str(value) + "\t")
                 f.write("\n")

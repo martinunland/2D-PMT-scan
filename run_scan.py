@@ -17,6 +17,7 @@ logging.getLogger("pulse_mode_analysis").setLevel(logging.WARNING)
 
 
 async def run_measurement(cfg: MeasurementConfig) -> None:
+
     mode = MeasurementMode.PULSE  # MeasurementMode.PULSE MeasurementMode.CURRENT
 
     motors = MotorsControl(cfg.cfg_motors)
@@ -27,8 +28,8 @@ async def run_measurement(cfg: MeasurementConfig) -> None:
         motors.connect_and_configure(), coils.connect_and_configure(), daq.connect()
     )
 
-    # centre_finder = CentreFinder(cfg.cfg_centre_finder, motors, analyser, daq)
-    # await centre_finder.run()
+    #centre_finder = CentreFinder(cfg.cfg_centre_finder, motors, analyser, daq)
+    #await centre_finder.run()
 
     grid = CircularConstantDensity(cfg.cfg_grid)
     grid.make_grid()
